@@ -62,9 +62,29 @@ def run_and_save_test_cases_output(
         )
         code_execution_results = {
             'success': False,
-            'message': 'Error grading the response.',
+            'message': 'Error grading the code.',
             'error': str(ex),
-            'output': None,
+            'output': {
+                'sample': {
+                    'error': 'Error grading the code. ' + str(ex),
+                }
+            },
+        }
+    except:
+        logger.exception(
+            'Could not grade response for user {} and block {}.'.format(
+                user_id, block_id
+            ),
+        )
+        code_execution_results = {
+            'success': False,
+            'message': 'Unexpceted error grading the code.',
+            'error': 'Unexpceted error grading the code.',
+            'output': {
+                'sample': {
+                    'error': 'Unexpceted error grading the code.',
+                }
+            },
         }
     else:
         if add_staff_cases:

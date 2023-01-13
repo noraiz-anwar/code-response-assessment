@@ -38,7 +38,13 @@ class ScriptedLanguageExecutorMixin(ABC):
             'language': cls.language,
             'version': cls.version,
             'profiles': [
-                epicbox.Profile(name=cls.id, docker_image=cls.docker_image, read_only=True,)
+                epicbox.Profile(
+                    name=cls.id,
+                    docker_image=cls.docker_image,
+                    read_only=True,
+                    network_disabled=False,
+                    user='sandbox',
+                )
             ],
         }
 
@@ -133,13 +139,16 @@ class CompiledLanguageExecutorMixin(ABC):
             'version': cls.version,
             'profiles': [
                 epicbox.Profile(
-                    name='{}-compile'.format(cls.id), docker_image=cls.docker_image,
+                    name='{}-compile'.format(cls.id),
+                    docker_image=cls.docker_image,
+                    user='sandbox',
                 ),
                 epicbox.Profile(
                     name='{}-run'.format(cls.id),
                     docker_image=cls.docker_image,
                     user='sandbox',
                     read_only=True,
+                    network_disabled=False,
                 ),
             ],
         }

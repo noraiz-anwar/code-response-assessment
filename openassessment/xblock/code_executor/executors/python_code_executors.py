@@ -4,12 +4,12 @@ from ..interface import CodeExecutor
 
 
 class PythonCodeExecutor(ScriptedLanguageExecutorMixin, CodeExecutor):
-    docker_image = 'stepik/epicbox-python:3.10.2'
+    docker_image = 'litmustest/code-executor-python:3.12'
     language = 'python'
-    version = '3.10.2'
-    display_name = 'Python 3.10'
+    version = '3.12'
+    display_name = 'Python 3.12'
 
-    id = CodeExecutor.create_id('python', '3.10.2')
+    id = CodeExecutor.create_id('python', '3.12')
 
     SOURCE_FILE_NAME_TEMPLATE = '{name}.py'
     RUN_COMMAND_STDIN_INPUT_TEMPLATE = 'python3 {source_file}'

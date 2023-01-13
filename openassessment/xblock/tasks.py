@@ -78,11 +78,11 @@ def run_and_save_test_cases_output(
         )
         code_execution_results = {
             'success': False,
-            'message': 'Unexpceted error grading the code.',
-            'error': 'Unexpceted error grading the code.',
+            'message': 'Unexpected error grading the code.',
+            'error': 'Unexpected error grading the code.',
             'output': {
                 'sample': {
-                    'error': 'Unexpceted error grading the code.',
+                    'error': 'Unexpected error grading the code.',
                 }
             },
         }

@@ -128,9 +128,6 @@ class CodeGraderMixin(object):
         elif executor_output['oom_killed']:
             response['output'] = 'Memory limit exceeded.'
         elif executor_output['stderr']:
-            )
-        elif executor_output['stdout']:
-            response['output'] = executor_output['stdout'].decode('utf-8')
             try:
                 response['output'] = truncate_error_output(
                     executor_output['stderr'].decode('utf-8')

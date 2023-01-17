@@ -11,6 +11,7 @@
  Returns:
  OpenAssessment.ResponseView
  **/
+
 OpenAssessment.ResponseView = function(element, server, fileUploader, baseView, data) {
     this.element = element;
     this.server = server;
@@ -18,6 +19,7 @@ OpenAssessment.ResponseView = function(element, server, fileUploader, baseView, 
     this.baseView = baseView;
     this.savedResponse = [];
     this.textResponse = 'required';
+    this.showFileUplaodCode = false;
     this.fileUploadResponse = '';
     this.files = null;
     this.filesDescriptions = [];
@@ -30,6 +32,7 @@ OpenAssessment.ResponseView = function(element, server, fileUploader, baseView, 
     this.announceStatus = false;
     this.isRendering = false;
     this.dateFactory = new OpenAssessment.DateTimeFactory(this.element);
+    this.codeEditor = null;
 };
 
 OpenAssessment.ResponseView.prototype = {
@@ -63,8 +66,10 @@ OpenAssessment.ResponseView.prototype = {
                 // Load the HTML and install event handlers
                 $(stepID, view.element).replaceWith(html);
                 view.server.renderLatex($(stepID, view.element));
+                // Editor should be setup before registering all the handlers
+                view.setupCodeEditor();
                 view.installHandlers();
-                view.setAutoSaveEnabled(true);
+                view.setAutoSaveEnabled(false);
                 view.isRendering = false;
                 view.baseView.announceStatusChangeToSRandFocus(stepID, usageID, false, view, focusID);
                 view.announceStatus = false;
@@ -89,15 +94,24 @@ OpenAssessment.ResponseView.prototype = {
         this.baseView.setUpCollapseExpand(sel);
 
         // Install change handler for textarea (to enable submission button)
-        this.savedResponse = this.response();
+        this.savedResponse = this.response('load');
         var handleChange = function() {view.handleResponseChanged();};
-        sel.find('.submission__answer__part__text__value').on('change keyup drop paste', handleChange);
+        var langChange = function(){view.handleLanguageSelectionChanged(); };
+
+        if(view.codeEditor != null) {
+            view.codeEditor.on('change keyup drop paste', handleChange);
+        }
+
+        // Adding on change handler for dropdown
+        sel.find('select#submission__answer__language').on('change', langChange);
 
         var handlePrepareUpload = function(eventData) {view.prepareUpload(eventData.target.files, uploadType);};
         sel.find('input[type=file]').on('change', handlePrepareUpload);
 
         var submit = $('.step--response__submit', this.element);
         this.textResponse = $(submit).attr('text_response');
+        var editor_textarea = $('.response__submission .submission__answer__part__text__value', this.element);
+        this.showFileUplaodCode = $(editor_textarea).attr('show_file_read_code');
         this.fileUploadResponse = $(submit).attr('file_upload_response');
 
         // Install a click handler for submission
@@ -143,6 +157,201 @@ OpenAssessment.ResponseView.prototype = {
         );
     },
 
+    /*
+    Get text areas
+     */
+    getPrompts: function(){
+        return $('.response__submission .submission__answer__part__text__value', this.element);
+    },
+
+    createTextArea: function(value){
+        var $elem = $('<p></p>');
+        $elem.text(value);
+        $elem.addClass('output_text_area');
+        return $elem;
+    },
+
+    errorTextArea: function(value){
+        var $elem = $('<p></p>');
+        $elem.text(value);
+        $elem.addClass('output_error_text_area');
+        return $elem;
+    },
+
+    createOutputHeader: function(value){
+        return "<p class='output_text_area'>"+ value +"</p>"
+    },
+
+    /*
+     Setup code editor in place of textarea
+    */
+    setupCodeEditor: function(){
+    var textArea = this.getPrompts()[0];
+    if(textArea != null){
+        this.codeEditor = window.CodeMirror.fromTextArea(textArea, {
+            lineNumbers: true,
+            showCursorWhenSelecting: true,
+            inputStyle: "contenteditable",
+            smartIndent: true,
+            indentWithTabs: true,
+            indentUnit: 4
+            }
+        );
+        this.codeEditor.setSize(null, 600);
+        this.updateEditorMode(this.getLanguage());
+    }
+    },
+
+    /*
+    Renders which test number failed and which has passed
+    */
+    showTestCaseResult: function(test_results){
+
+        var $table, $row, style;
+        var header_keys = ["Test Input", "Your Output", "Expected Output"];
+        var data_keys = ["test_input", "actual_output", "expected_output"];
+
+        // Setup Table
+        $table = $("<table>");
+        $table.addClass("results_table");
+
+        // Setup Table header HTML and values
+        $table.append('<thead>');
+        $table.find('thead').append("<tr>");
+        $row = $table.find("thead > tr:last");
+        for(var idx in header_keys){
+            $row.append("<th>");
+            $row.find("th:last").append(this.createOutputHeader(header_keys[idx]));
+        }
+
+        // Setup Table body HTML and values
+        $table.append('<tbody>');
+        for(var key in test_results){
+            $table.find('tbody').append("<tr>");
+            $row = $table.find("tbody > tr:last");
+
+            style= "rgba(205, 0, 0, 0.3)";
+            if(test_results[key]['correct']==true){
+                style= "rgba(0, 205, 0, 0.3)";
+            }
+            $row.css('background', style);
+
+            for(var index in data_keys){
+                $row.append("<td>");
+                $row.find("td:last").append(this.createTextArea(test_results[key][data_keys[index]]));
+            }
+        }
+
+        // Update the summary element with created table
+        $("#test_case_status_result", this.element).html($table);
+    },
+
+    /*
+    Render the code output for the design problems
+    */
+    showExecutionResults: function(output){
+        var $header, $content;
+        $header = this.getExecutionResultHeader();
+        $content = $('<p></p>')
+        $content.text(output);
+        $content.addClass('execution_output');
+        $content = $header.add($content);
+        $("#test_case_status_result", this.element).html($content);
+    },
+
+    /*
+    Render the code execution errors for the design problems
+    */
+    showExecutionError: function(error){
+        var $header, $content;
+        $header = this.getExecutionResultHeader();
+        $content = this.errorTextArea(error);
+        $content = $header.add($content);
+        $("#test_case_status_result", this.element).html($content);
+    },
+
+    /*
+    Create and return the header for design problem execution
+    */
+    getExecutionResultHeader: function(){
+    var $header = $('<h2></h2>');
+    $header.text(gettext("Code Execution Result"));
+    $header.css('color', 'black');
+    return $header
+    },
+
+    /*
+    Add the HTML to show how many test cases passed from the total number
+    */
+    showResultSummary: function(publicResults, privateResults){
+        var $summary = $("<div>");
+        $summary.addClass('results_summary');
+        $summary.append(
+            "<p><strong>Sample Test Cases Result: "
+            + publicResults.correct + "/"
+            + publicResults.total
+            + "</strong></p>"
+        );
+        if(privateResults) {
+            $summary.append(
+                "<p><strong>Hidden Test Cases Result: "
+                + privateResults.correct + "/"
+                + privateResults.total
+                + "</strong></p>"
+            );
+
+        }
+        $summary.append("</div>")
+        $("#test_cases_summary", this.element).html($summary);
+    },
+
+    /*
+    Clear the summary HTML
+    */
+    clearResultSummary: function(){
+        $("#test_cases_summary").html("");
+    },
+
+    /*
+    Displays a textbox containing the code error
+    */
+    showRunError: function(error){
+        $("#test_case_status_result", this.element).html(this.errorTextArea(error));
+    },
+
+    /*
+    Show the response is either correct/incorrect based on the given value
+    */
+    indicateCorrectness: function(correctness){
+        if(correctness==true){
+          this.saveStatus(gettext("Code output matches the expected output"));
+        }
+        else{
+          this.saveStatus(gettext("Code output does not match with the expected output"));
+        }
+    },
+
+    /*
+    Code Execution error message
+    */
+    indicateError: function(){
+          this.saveStatus(gettext("Execution Error"));
+    },
+
+    /*
+    Indicate successful code execution
+    */
+    indicateExecutionSuccess: function(){
+        this.saveStatus(gettext("Code Execution Successful"));
+    },
+
+    /*
+    Get the currently selected language from the dropdown
+    */
+    getLanguage: function(){
+        return $("select#submission__answer__language", this.element).val();
+    },
+
     /**
      Enable or disable autosave polling.
 
@@ -175,9 +384,10 @@ OpenAssessment.ResponseView.prototype = {
      *
      */
     checkSubmissionAbility: function(filesFiledIsNotBlank) {
-        var textFieldsIsNotBlank = !this.response().every(function(element) {
-            return $.trim(element) === '';
-        });
+        var currentResponse = this.response('save');
+        var textFieldsIsNotBlank = !(Object.keys(currentResponse).forEach(function(key) {
+            return $.trim(currentResponse[key]) === '';
+        }));
 
         filesFiledIsNotBlank = filesFiledIsNotBlank || false;
         $('.submission__answer__file', this.element).each(function() {
@@ -208,9 +418,10 @@ OpenAssessment.ResponseView.prototype = {
      *
      */
     checkSaveAbility: function() {
-        var textFieldsIsNotBlank = !this.response().every(function(element) {
-            return $.trim(element) === '';
-        });
+        var currentResponse = this.response('save');
+        var textFieldsIsNotBlank = !(Object.keys(currentResponse).forEach(function(key) {
+            return $.trim(currentResponse[key]) === '';
+        }));
 
         return !((this.textResponse === 'required') && !textFieldsIsNotBlank);
     },
@@ -322,17 +533,15 @@ OpenAssessment.ResponseView.prototype = {
      Returns:
      array of strings: The current response texts.
      **/
-    response: function(texts) {
-        var sel = $('.response__submission .submission__answer__part__text__value', this.element);
-        if (typeof texts === 'undefined') {
-            return sel.map(function() {
-                return $.trim($(this).val());
-            }).get();
-        } else {
-            sel.map(function(index) {
-                $(this).val(texts[index]);
-            });
+    response: function(action) {
+        var editorValue;
+        if(this.codeEditor != null){
+            editorValue = this.codeEditor.getValue();
         }
+        else{
+            editorValue = null;
+        }
+        return {"submission": editorValue, "language": this.getLanguage()};
     },
 
     /**
@@ -342,8 +551,9 @@ OpenAssessment.ResponseView.prototype = {
      **/
     responseChanged: function() {
         var savedResponse = this.savedResponse;
-        return this.response().some(function(element, index) {
-            return element !== savedResponse[index];
+        var currentResponse = this.response('save');
+        return Object.keys(currentResponse).forEach(function(key) {
+            return savedResponse[key] !== currentResponse[key];
         });
     },
 
@@ -369,26 +579,115 @@ OpenAssessment.ResponseView.prototype = {
     },
 
     /**
+    Handle if the language selection dropdown has been changed
+    **/
+    handleLanguageSelectionChanged: function(){
+    var language = this.getLanguage();
+    this.updateEditorMode(language);
+    this.handleResponseChanged();
+    var defaulCodes  =  {
+           "Python":"import sys\n" +
+               "\n" +
+               "lines = open(sys.argv[1], 'r').readlines()\n" +
+               "\n" +
+               "# Write your code here.",
+           "NodeJS":"const fs = require('fs');\n" +
+               "\n" +
+               "const args = process.argv.slice(2);\n" +
+               "const fileName = args[0];\n" +
+               "\n" +
+               "const content = fs.readFileSync(fileName).toString();\n" +
+               "const lines = content.split('\\n');\n" +
+               "\n" +
+               "// Write your code here.",
+           "Java":"import java.io.File;\n" +
+               "import java.io.FileNotFoundException;\n" +
+               "import java.util.Scanner;\n" +
+               "\n" +
+               "\n" +
+               "public class Main {\n" +
+               "  public static void main(String[] args) {\n" +
+               "    try {\n" +
+               "      File inputFile = new File(args[0]);\n" +
+               "      Scanner inputReader = new Scanner(inputFile);\n" +
+               "      while (inputReader.hasNextLine()) {\n" +
+               "        String line = inputReader.nextLine();\n" +
+               "\n" +
+               "        // Write your code here.\n" +
+               "\n" +
+               "      }\n" +
+               "      inputReader.close();\n" +
+               "    } catch (FileNotFoundException e) {\n" +
+               "      System.out.println(\"An error occurred.\");\n" +
+               "      e.printStackTrace();\n" +
+               "    }\n" +
+               "  }\n" +
+               "}",
+           "C++":"#include <iostream>\n" +
+               "#include <fstream>\n" +
+               "\n" +
+               "using namespace std;\n" +
+               "\n" +
+               "\n" +
+               "int main(int argc, char *argv[]) {\n" +
+               "  ifstream inputFile(argv[1]);\n" +
+               "\n" +
+               "  string line = \"\";\n" +
+               "  do {\n" +
+               "    getline(inputFile, line);\n" +
+               "\n" +
+               "    // Write your code here.\n" +
+               "\n" +
+               "  } while(inputFile.good());\n" +
+               "\n" +
+               "  return 0;\n" +
+               "}"
+        }
+
+    if(this.showFileUplaodCode === 'True' && (this.codeEditor.getValue() === '' || Object.values(defaulCodes).includes(this.codeEditor.getValue()))){
+        this.codeEditor.setValue(defaulCodes[language]);
+    }
+    },
+
+    /**
+    Update the code editor mode based on the passed language
+    **/
+    updateEditorMode: function(language){
+      if (language == "Python"){
+        this.codeEditor.setOption("mode", {name: "python", version: 3});
+      }
+      else if (language == "Java"){
+        this.codeEditor.setOption("mode", "text/x-java");
+      }
+      else if (language == "C++"){
+        this.codeEditor.setOption("mode", "text/x-c++src");
+      }
+      else if (language == "NodeJS"){
+        this.codeEditor.setOption("mode", "javascript");
+      }
+    },
+
+    /**
      Enable/disable the submission and save buttons based on whether
      the user has entered a response.
      **/
     handleResponseChanged: function() {
+        this.codeEditor.refresh();
         this.checkSubmissionAbility();
 
         // Update the save button, save status, and "unsaved changes" warning
         // only if the response has changed
-        if (this.responseChanged()) {
+
             var saveAbility = this.checkSaveAbility();
             this.saveEnabled(saveAbility);
             this.previewEnabled(saveAbility);
-            this.saveStatus(gettext('This response has not been saved.'));
             this.baseView.unsavedWarningEnabled(
                 true,
                 this.UNSAVED_WARNING_KEY,
                 // eslint-disable-next-line max-len
                 gettext('If you leave this page without saving or submitting your response, you will lose any work you have done on the response.')
             );
-        }
+
 
         // Record the current time (used for autosave)
         this.lastChangeTime = Date.now();
@@ -403,33 +702,60 @@ OpenAssessment.ResponseView.prototype = {
         // we'll set this back to true in the error handler.
         this.errorOnLastSave = false;
 
+        // If no language from dropdown has been selected, show the error and stop the execution
+        if(this.getLanguage() === null){
+            this.showRunError(gettext("Please select a language from the list"));
+            return;
+        }
+
         // Update the save status and error notifications
-        this.saveStatus(gettext('Saving...'));
+        this.saveStatus(gettext('Code execution in progress'));
         this.baseView.toggleActionError('save', null);
 
         // Disable the "unsaved changes" warning
         this.baseView.unsavedWarningEnabled(false, this.UNSAVED_WARNING_KEY);
 
         var view = this;
-        var savedResponse = this.response();
-        this.server.save(savedResponse).done(function() {
+        var savedResponse = this.response('save');
+        view.saveEnabled(false);
+        this.server.save(savedResponse).done(function(data) {
             // Remember which response we saved, once the server confirms that it's been saved...
             view.savedResponse = savedResponse;
+            var error = data?.public?.error ?? data?.private?.error
+            if(error){
+                if(data?.public?.is_design_problem){
+                    view.showExecutionError(error);
+                }
+                else{
+                    view.showRunError(error);
+                }
+                view.indicateError();
+                view.clearResultSummary();
+            }
+            else if(!data?.public?.is_design_problem){
+                view.showResultSummary(
+                    {
+                        correct: data.public.correct,
+                        total: data.public.total_tests
+                    },
+                    data.private ? {
+                        correct: data.private.correct,
+                        total: data.private.total_tests
+                    } : null
+                );
+                view.showTestCaseResult(data.public.output);
+                view.indicateCorrectness(data.public.correct === data.public.total_tests);
+            } else{
+                view.indicateExecutionSuccess();
+                view.showExecutionResults(data.public.output);
+            }
 
             // ... but update the UI based on what the user may have entered
             // since hitting the save button.
             view.checkSubmissionAbility();
 
-            var currentResponse = view.response();
-            var currentResponseEqualsSaved = currentResponse.every(function(element, index) {
-                return element === savedResponse[index];
-            });
-            if (currentResponseEqualsSaved) {
-                view.saveEnabled(false);
-                var msg = gettext('This response has been saved but not submitted.');
-                view.saveStatus(msg);
-                view.baseView.srReadTexts([msg]);
-            }
+            view.saveEnabled(true);
+            view.baseView.toggleActionError('save', null);
         }).fail(function(errMsg) {
             view.saveStatus(gettext('Error'));
             view.baseView.toggleActionError('save', errMsg);
@@ -438,6 +764,7 @@ OpenAssessment.ResponseView.prototype = {
             // so we can disable autosave
             // (avoids repeatedly refreshing the error message)
             view.errorOnLastSave = true;
+            view.saveEnabled(false);
         });
     },
 
@@ -445,6 +772,13 @@ OpenAssessment.ResponseView.prototype = {
      Send a response submission to the server and update the view.
      **/
     submit: function() {
+
+        // If no language is selected, don't do the submission
+        if(this.getLanguage() === null){
+            this.showRunError(gettext("Please select a language from the list"));
+            return;
+        }
+
         // Immediately disable the submit button to prevent multiple submission
         this.submitEnabled(false);
 
@@ -478,10 +812,11 @@ OpenAssessment.ResponseView.prototype = {
                     // NOTE: in JQuery >=1.8, `pipe()` is deprecated in favor of `then()`,
                     // but we're using JQuery 1.7 in the LMS, so for now we're stuck with `pipe()`.
                     .pipe(function() {
-                        var submission = view.response();
+                        var submission = view.response('submit');
                         baseView.toggleActionError('response', null);
 
                         // Send the submission to the server, returning the promise.
+                        view.saveStatus("Creating submission. Please Wait!")
                         return view.server.submit(submission);
                     });
             })
@@ -533,7 +868,7 @@ OpenAssessment.ResponseView.prototype = {
     confirmSubmission: function() {
         // Keep this on one big line to avoid gettext bug: http://stackoverflow.com/a/24579117
         // eslint-disable-next-line max-len
-        var msg = gettext('You\'re about to submit your response for this assignment. After you submit this response, you can\'t change it or submit a new response.');
+        var msg = gettext('Are you sure you want to submit your response? After submitting the response, you cannot change or submit a new answer for this problem.');
         // TODO -- UI for confirmation dialog instead of JS confirm
         // eslint-disable-next-line new-cap
         return $.Deferred(function(defer) {

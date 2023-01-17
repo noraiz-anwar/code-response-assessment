@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import dateutil
 from pytz import utc
 import six
+import re
 
 from voluptuous import All, Any, In, Invalid, Range, Required, Schema
 
@@ -26,10 +27,9 @@ def utf8_validator(value):
 
     """
     try:
-        if isinstance(value, str):
+        if isinstance(value, bytes):
             return value.decode('utf-8')
-        else:
-            return six.text_type(value)
+        return str(value)
     except (ValueError, TypeError):
         raise Invalid(u"Could not load unicode from value \"{val}\"".format(val=value))
 
@@ -58,6 +58,31 @@ def datetime_validator(value):
         return six.text_type(value.isoformat())
     except (ValueError, TypeError):
         raise Invalid(u"Could not parse datetime from value \"{val}\"".format(val=value))
+
+
+def labels_validator(value):
+    """
+    Validate and sanitize labels string.
+
+    Args:
+        value: The value to validate.
+    
+    Returns:
+        unicode: The validated value.
+
+    Raises:
+        Invalid
+    """
+    if value is None or value.strip() == "":
+        return ""
+    else:
+        match = re.search(r"((?![a-z ,]).)+", value)
+        if bool(match):
+            raise Invalid(u"Labels contains character that is not allowed: {} ".format(
+                match.group()
+            ))
+
+    return value
 
 
 PROMPTS_TYPES = [
@@ -95,6 +120,9 @@ EDITOR_UPDATE_SCHEMA = Schema({
     ],
     Required('prompts_type', default='text'): Any(All(utf8_validator, In(PROMPTS_TYPES)), None),
     Required('title'): utf8_validator,
+    Required('labels'): All(utf8_validator, labels_validator),
+    Required('show_private_test_case_results'): bool,
+    Required('show_file_read_code'): bool,
     Required('feedback_prompt'): utf8_validator,
     Required('feedback_default_text'): utf8_validator,
     Required('submission_start'): Any(datetime_validator, None),

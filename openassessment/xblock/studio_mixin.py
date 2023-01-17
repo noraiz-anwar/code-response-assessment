@@ -24,7 +24,7 @@ from openassessment.xblock.validation import validator
 from voluptuous import MultipleInvalid
 from xblock.core import XBlock
 from xblock.fields import List, Scope
-from xblock.fragment import Fragment
+from web_fragments.fragment import Fragment
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,8 @@ class StudioMixin(object):
             self.add_javascript_files(fragment, "static/js/src/studio")
         else:
             # TODO: switch to add_javascript_url once XBlock resources are loaded from the CDN
-            fragment.add_javascript(pkg_resources.resource_string(__name__, "static/js/openassessment-studio.min.js"))
+            js_bytes = pkg_resources.resource_string(__name__, "static/js/openassessment-studio.min.js")
+            fragment.add_javascript(js_bytes.decode('utf-8'))
         js_context_dict = {
             "FILE_EXT_BLACK_LIST": self.FILE_EXT_BLACK_LIST,
         }
@@ -104,7 +105,9 @@ class StudioMixin(object):
             dict with keys
                 'rubric' (unicode), 'prompt' (unicode), 'title' (unicode),
                 'submission_start' (unicode),  'submission_due' (unicode),
-                'assessments (dict)
+                'assessments' (dict), 'labels' (unicode),
+                'show_private_test_case_results' (boolean),
+                'show_file_read_code' (boolean),
 
         """
         # In the authoring GUI, date and time fields should never be null.
@@ -141,6 +144,7 @@ class StudioMixin(object):
             'title': self.title,
             'submission_due': submission_due,
             'submission_start': submission_start,
+            'labels': self.labels,
             'assessments': assessments,
             'criteria': criteria,
             'feedbackprompt': self.rubric_feedback_prompt,
@@ -151,6 +155,8 @@ class StudioMixin(object):
             'file_upload_type': self.file_upload_type,
             'white_listed_file_types': self.white_listed_file_types_string,
             'allow_latex': self.allow_latex,
+            'show_private_test_case_results': self.show_private_test_case_results,
+            'show_file_read_code': self.show_file_read_code,
             'leaderboard_show': self.leaderboard_show,
             'editor_assessments_order': [
                 make_django_template_key(asmnt)
@@ -245,6 +251,7 @@ class StudioMixin(object):
         self.submission_due = data['submission_due']
         self.text_response = data['text_response']
         self.file_upload_response = data['file_upload_response']
+        self.labels = data['labels']
         if data['file_upload_response']:
             self.file_upload_type = data['file_upload_type']
             self.white_listed_file_types_string = data['white_listed_file_types']
@@ -252,6 +259,8 @@ class StudioMixin(object):
             self.file_upload_type = None
             self.white_listed_file_types_string = None
         self.allow_latex = bool(data['allow_latex'])
+        self.show_private_test_case_results = bool(data['show_private_test_case_results'])
+        self.show_file_read_code = bool(data['show_file_read_code'])
         self.leaderboard_show = data['leaderboard_show']
 
         return {'success': True, 'msg': self._(u'Successfully updated OpenAssessment XBlock')}

@@ -19,6 +19,7 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
     };
 
     var jsonContentType = "application/json; charset=utf-8";
+    var prevRequest = null;
 
     OpenAssessment.Server.prototype = {
 
@@ -173,7 +174,7 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
                 $.ajax({
                     type: "POST",
                     url: url,
-                    data: JSON.stringify({submission: submission}),
+                    data: JSON.stringify(submission),
                     contentType: jsonContentType
                 }).done(function(data) {
                     var success = data[0];
@@ -203,16 +204,27 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
         save: function(submission) {
             var url = this.url('save_submission');
             return $.Deferred(function(defer) {
-                $.ajax({
+                 prevRequest = $.ajax({
                     type: "POST",
                     url: url,
-                    data: JSON.stringify({submission: submission}),
-                    contentType: jsonContentType
+                    data: JSON.stringify(submission),
+                    contentType: jsonContentType,
+                    beforeSend: function(){
+                    if(prevRequest != null){
+                        prevRequest.abort("Previous code run aborted");
+                    }
+                    },
                 }).done(function(data) {
-                    if (data.success) { defer.resolve(); }
+                    prevRequest = null;
+                    if (data.success) { defer.resolve(data.out); }
                     else { defer.rejectWith(this, [data.msg]); }
-                }).fail(function() {
-                    defer.rejectWith(this, [gettext("This response could not be saved.")]);
+                }).fail(function(data) {
+                    errorMessage = "This response could not be saved.";
+                    if(data.statusText){
+                        errorMessage = data.statusText;
+                    }
+                    prevRequest = null;
+                    defer.rejectWith(this, [gettext(errorMessage)]);
                 });
             }).promise();
         },
@@ -426,6 +438,8 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
          *     fileTypeWhiteList (string): Comma separated file type white list
          *     latexEnabled: TRUE if latex rendering is enabled.
          *     leaderboardNum (int): The number of scores to show in the leaderboard.
+         *     labels (string): A string with comma-separated values.
+         *     showPrivateTestCaseResultsEnabled (boolean): True if rendering private test case results is enabled.
          *
          * @returns {promise} A JQuery promise, which resolves with no arguments
          *     and fails with an error message.
@@ -438,6 +452,7 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
                 feedback_prompt: options.feedbackPrompt,
                 feedback_default_text: options.feedback_default_text,
                 title: options.title,
+                labels: options.labels,
                 submission_start: options.submissionStart,
                 submission_due: options.submissionDue,
                 criteria: options.criteria,
@@ -448,6 +463,8 @@ if (typeof OpenAssessment.Server === "undefined" || !OpenAssessment.Server) {
                 file_upload_type: options.fileUploadType,
                 white_listed_file_types: options.fileTypeWhiteList,
                 allow_latex: options.latexEnabled,
+                show_private_test_case_results: options.showPrivateTestCaseResultsEnabled,
+                show_file_read_code: options.showFileReadCodeEnabled,
                 leaderboard_show: options.leaderboardNum
             });
             return $.Deferred(function(defer) {

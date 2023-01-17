@@ -4,12 +4,12 @@ from ..interface import CodeExecutor
 
 
 class JavaCodeExecutor(CompiledLanguageExecutorMixin, CodeExecutor):
-    docker_image = 'stepik/epicbox-java:17.0.1'
+    docker_image = 'litmustest/code-executor-openjdk:19'
     language = 'java'
-    version = '17.0.1'
-    display_name = 'Java 17'
+    version = 'openjdk-19'
+    display_name = 'Java 19 (openjdk 19)'
 
-    id = CodeExecutor.create_id('java', '17.0.1')
+    id = CodeExecutor.create_id('java', 'openjdk-19')
 
     SOURCE_FILE_NAME_TEMPLATE = 'Main.java'
     EXECUTABLE_FILE_NAME_TEMPLATE = 'Main'

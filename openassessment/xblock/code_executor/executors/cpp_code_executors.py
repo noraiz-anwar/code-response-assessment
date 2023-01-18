@@ -4,7 +4,7 @@ from ..interface import CodeExecutor
 
 
 class CppCodeExecutor(CompiledLanguageExecutorMixin, CodeExecutor):
-    docker_image = 'litmustest/code-executor-gpp:12.2'
+    docker_image = 'litmustest/code-executor-gpp:12.2.1'
     language = 'cpp'
     version = 'g++-12.2'
     display_name = 'C++ 20 (g++ 12.2)'

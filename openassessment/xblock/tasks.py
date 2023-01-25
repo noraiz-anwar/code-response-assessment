@@ -88,7 +88,21 @@ def run_and_save_test_cases_output(
         }
     else:
         if add_staff_cases:
-            sample_output, staff_output = grade_output
+            # There can be two type of responses from the grading function:
+            # 1. List or tuple with one or 2 elements. In this case values will be unpacked as expected
+            # 2. List or tuple with one element. In this case the value will be unpacked as a single element and the
+            #   second element will be None
+            # 3. Single Object. In this case the value will be unpacked as a single element and the second element will
+            #   be None
+
+            sample_output, staff_output = None, None
+            if (type(grade_output) is tuple or type(grade_output) is list) and len(grade_output) == 2:
+                sample_output, staff_output = grade_output
+            elif (type(grade_output) is tuple or type(grade_output) is list) and len(grade_output) == 1:
+                sample_output = grade_output[0]
+            else:
+                sample_output = grade_output
+
         else:
             sample_output, staff_output = grade_output, None
 
@@ -117,6 +131,11 @@ def run_and_save_staff_test_cases(block_id, sub_uuid, problem_name, **kwargs):
     If not saved, add a default error response and log the exception
     """
     if is_design_problem(problem_name):
+        CODING_TEST_CASES_EVALUATED.send(
+            sender=None,
+            block_id=block_id,
+            submission_uuid=sub_uuid,
+        )
         return
 
     logger.info(

@@ -23,7 +23,7 @@ from openassessment.xblock.job_sample_grader.utils import (
 from litmustest_djangoapps.core.models import AssessmentQuestionXblockMapping
 
 logger = logging.getLogger(__name__)
-
+SUBMISSION_MAX_SIZE = 95 * 1024  # 95 KB
 
 ALL_CODE_EXECUTORS = sorted(
     [
@@ -97,17 +97,29 @@ class CodeGraderMixin(object):
         output = []
         if is_design_problem(problem_name):
             try:
-                output.append(self.run_design_code(executor_id, source_code=source_code))
+                details = self.run_design_code(executor_id, source_code=source_code)
+                if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
+                    output.extend(self.response_with_error_v2('Submission too large.'))
+                else:
+                    output.append(details)
             except CodeCompilationError as ex:
                 output.extend(self.response_with_error_v2(ex.message))
         else:
             try:
-                output.append(self.run_code('sample', executor_id, source_code, problem_name))
+                details = self.run_code('sample', executor_id, source_code, problem_name)
+                if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
+                    output.extend(self.response_with_error_v2('Submission too large.'))
+                else:
+                    output.append(self.run_code('sample', executor_id, source_code, problem_name))
             except CodeCompilationError as ex:
                 output.extend(self.response_with_error_v2(ex.message))
             if add_staff_cases:
                 try:
-                    output.append(self.run_code('staff', executor_id, source_code, problem_name))
+                    details = self.run_code('staff', executor_id, source_code, problem_name)
+                    if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
+                        output.extend(self.response_with_error_v2('Submission too large.'))
+                    else:
+                        output.append(self.run_code('staff', executor_id, source_code, problem_name))
                 except CodeCompilationError as ex:
                     output.extend(self.response_with_error_v2(ex.message))
 

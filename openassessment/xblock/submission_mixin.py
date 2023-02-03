@@ -9,6 +9,8 @@ import webob
 
 from datetime import timedelta
 from typing import Union
+
+from django.db import transaction
 from six.moves import range
 
 from celery.result import states as celert_task_states
@@ -485,15 +487,18 @@ class SubmissionMixin(object):
         student_item_dict = self.get_student_item_dict()
         student_user_id = self.get_user_id_from_student_dict(student_item_dict)
 
-        self.code_execution_task_id = run_and_save_test_cases_output.apply_async(
-            kwargs={
-                'block_id': str(self.scope_ids.usage_id),
-                'user_id': student_user_id,
-                'saved_response': data,
-                'add_staff_cases': show_staff_cases,
-            }).task_id
-
         self.save()
+        def run_code():
+            self.code_execution_task_id = run_and_save_test_cases_output.apply_async(
+                kwargs={
+                    'block_id': str(self.scope_ids.usage_id),
+                    'user_id': student_user_id,
+                    'saved_response': data,
+                    'add_staff_cases': show_staff_cases,
+                }).task_id
+            self.save()
+
+        transaction.on_commit(run_code)
 
         # Emit analytics event...
         self.runtime.publish(

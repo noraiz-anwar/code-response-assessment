@@ -23,7 +23,7 @@ from openassessment.xblock.job_sample_grader.utils import (
 from litmustest_djangoapps.core.models import AssessmentQuestionXblockMapping
 
 logger = logging.getLogger(__name__)
-SUBMISSION_MAX_SIZE = 100 * 1024  # 100 KB
+SUBMISSION_MAX_SIZE = 95 * 1024  # 95 KB
 
 ALL_CODE_EXECUTORS = sorted(
     [

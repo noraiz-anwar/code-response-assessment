@@ -110,7 +110,7 @@ class CodeGraderMixin(object):
                 if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
                     output.extend(self.response_with_error_v2('Output size exceeded. Maximum allowed size is 100 KB.'))
                 else:
-                    output.append(self.run_code('sample', executor_id, source_code, problem_name))
+                    output.append(details)
             except CodeCompilationError as ex:
                 output.extend(self.response_with_error_v2(ex.message))
             if add_staff_cases:
@@ -120,7 +120,7 @@ class CodeGraderMixin(object):
                         output.extend(self.response_with_error_v2('Output size exceeded. Maximum allowed size is 100 '
                                                                   'KB.'))
                     else:
-                        output.append(self.run_code('staff', executor_id, source_code, problem_name))
+                        output.append(details)
                 except CodeCompilationError as ex:
                     output.extend(self.response_with_error_v2(ex.message))
 

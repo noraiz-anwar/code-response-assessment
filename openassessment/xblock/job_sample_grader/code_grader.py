@@ -99,11 +99,12 @@ class CodeGraderMixin(object):
             try:
                 details = self.run_design_code(executor_id, source_code=source_code)
                 if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
-                    output.extend(self.response_with_error_v2('Submission too large.'))
+                    error = 'Output size exceeded. Maximum allowed size is 100 KB.'
+                    output.extend(self.response_with_error_v2(error, is_design_problem(problem_name)))
                 else:
                     output.append(details)
             except CodeCompilationError as ex:
-                output.extend(self.response_with_error_v2(ex.message))
+                output.extend(self.response_with_error_v2(ex.message, is_design_problem(problem_name)))
         else:
             try:
                 details = self.run_code('sample', executor_id, source_code, problem_name)
@@ -125,12 +126,12 @@ class CodeGraderMixin(object):
 
         return output
 
-    def response_with_error_v2(self, error):
+    def response_with_error_v2(self, error, is_design_problem=False):
         """
         To make the incorrect language error compatible with per file test
         case run output.
         """
-        return [get_error_response('sample', error)]
+        return [get_error_response('sample', error, is_design_problem)]
 
     def _executor_output_to_response_format(self, executor_output):
         response = {'output': '', 'error': '', 'exit_code': executor_output['exit_code']}
@@ -176,7 +177,7 @@ class CodeGraderMixin(object):
 
         for case_number in sorted(test_cases.keys()):
             case = test_cases[case_number]
-            test_case_tmp_file_name_prefix = str(uuid4());
+            test_case_tmp_file_name_prefix = str(uuid4())
             try:
                 input_file = NamedTemporaryFile(
                     mode='w+',
@@ -216,6 +217,7 @@ class CodeGraderMixin(object):
                         'content': bytes(case['input'], 'utf-8'),
                     },
                     'expected_output_file': {'name': expected_output_file.name},
+                    'points': case.get('points', 1),
                 }
             )
 
@@ -256,6 +258,8 @@ class CodeGraderMixin(object):
                         'content': input_content,
                     },
                     'expected_output_file': {'name': expected_output_file},
+                    # points not supported for test cases from file
+                    'points': 1,
                 }
             )
 
@@ -304,6 +308,8 @@ class CodeGraderMixin(object):
             'incorrect': 0,
             'output': OrderedDict(),
             'error': None,
+            'scored_points': 0,
+            'total_points': 0,
         }
         # for server_shell paths start with / e.g. "/grader_data/..."
         # for epicbox paths are relative to home e.g. "grader_data/..."
@@ -332,8 +338,11 @@ class CodeGraderMixin(object):
 
                 if run_output['correct']:
                     output['correct'] += 1
+                    output['scored_points'] += case_file.get('points', 1)
                 else:
                     output['incorrect'] += 1
+
+                output['total_points'] += case_file.get('points', 1)
 
                 expected_output = run_output['tests'][0][1]
                 actual_output = run_output['tests'][0][2]
@@ -344,6 +353,7 @@ class CodeGraderMixin(object):
                     'actual_output': actual_output,
                     'expected_output': expected_output,
                     'correct': run_output['correct'],
+                    'points': case_file.get('points', 1)
                 }
 
                 input_file_name = case_file['input_file']['name']

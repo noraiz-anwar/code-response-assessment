@@ -3,8 +3,6 @@ Holds utility functions related to code_grader module.
 """
 
 
-
-
 def is_design_problem(problem_name):
     """
     Temporary helper method to check if a coding problem is a design problem.
@@ -13,7 +11,7 @@ def is_design_problem(problem_name):
     return problem_name_in_lower.endswith('design problem')
 
 
-def get_error_response(run_type, error):
+def get_error_response(run_type, error, is_design_problem=False):
     """
     Create a sample error response for a given run and the error to be displayed.
     """
@@ -23,7 +21,8 @@ def get_error_response(run_type, error):
         'correct': 0,
         'incorrect': 0,
         'output': None,
-        'error': [error]
+        'error': [error],
+        'is_design_problem': is_design_problem,
     }
 
 

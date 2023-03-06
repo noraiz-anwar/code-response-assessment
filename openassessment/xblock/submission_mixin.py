@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import json
 import logging
 import os
-import simplejson 
+import simplejson
 import six
 import webob
 
@@ -491,6 +491,7 @@ class SubmissionMixin(object):
         student_user_id = self.get_user_id_from_student_dict(student_item_dict)
 
         self.save()
+
         def run_code():
             self.code_execution_task_id = run_and_save_test_cases_output.apply_async(
                 kwargs={

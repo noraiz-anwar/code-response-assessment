@@ -267,7 +267,7 @@ class StaffAreaMixin(object):
             'user_timezone': user_preferences['user_timezone'],
             'user_language': user_preferences['user_language'],
             "prompts_type": self.prompts_type,
-            "design_problem": is_design_problem(self.display_name)
+            "design_problem": is_design_problem(self.scope_ids.usage_id, self.display_name)
         }
         if submission:
             sample_run = submission['answer']['sample_run']

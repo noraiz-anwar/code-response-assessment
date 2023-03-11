@@ -10,6 +10,8 @@ from openassessment.assessment.errors import StaffAssessmentInternalError, Staff
 from openassessment.workflow import api as workflow_api
 from xblock.core import XBlock
 
+from litmustest_djangoapps.core.celery_tasks.add_rubric_score_in_reports import add_rubric_scores_in_reports
+
 from .data_conversion import clean_criterion_feedback, create_rubric_dict, verify_assessment_parameters
 from .staff_area_mixin import require_course_staff
 
@@ -73,6 +75,9 @@ class StaffAssessmentMixin(object):
             msg = self._(u"Your staff assessment could not be submitted.")
             return {'success': False, 'msg': msg}
         else:
+            add_rubric_scores_in_reports.apply_async(
+                args=[data['submission_uuid'], self.rubric_criteria_with_labels]
+            )
             return {'success': True, 'msg': u""}
 
     @XBlock.handler

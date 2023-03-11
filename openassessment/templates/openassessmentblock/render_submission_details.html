@@ -21,9 +21,9 @@
         <tbody>
             {% for key, value in response.output.items %}
                 <tr style="background: {%if value.correct%}rgba(0, 205, 0, 0.3){%else%}rgba(205, 0, 0, 0.3){%endif%}" >
-                    <td style="max-width:33vw; word-break:break-word;"><p  class="output_text_area" > {{value.test_input|escape|linebreaksbr}}</p></td>
-                    <td style="max-width:33vw;"><p  class="output_text_area" > {{value.actual_output|escape|linebreaksbr}}</p></td>
-                    <td style="max-width:33vw;"><p  class="output_text_area" >{{value.expected_output|escape|linebreaksbr}}</p></td>
+                    <td style="width:300px; word-break:break-word;"><p  class="output_text_area" > {{value.test_input|escape|linebreaksbr}}</p></td>
+                    <td style="max-width:33vw; word-wrap:break-word;"><p  class="output_text_area" > {{value.actual_output|escape|linebreaksbr}}</p></td>
+                    <td style="width:200px;"><p  class="output_text_area" >{{value.expected_output|escape|linebreaksbr}}</p></td>
                 </tr>
 
             {% endfor %}

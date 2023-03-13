@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import json
 import logging
 import os
-import simplejson 
+import simplejson
 import six
 import webob
 
@@ -13,9 +13,10 @@ from typing import Union
 from django.db import transaction
 from six.moves import range
 
-from celery.result import states as celert_task_states
+from celery.result import states as celery_task_states
 from celery.result import AsyncResult
 from django.utils import timezone
+from django.conf import settings
 
 from openassessment.fileupload import api as file_upload_api
 from openassessment.fileupload.exceptions import FileUploadError
@@ -392,17 +393,19 @@ class SubmissionMixin(object):
         Returns:
             bool: True if code is being executed.
         """
+        if settings.CELERY_ALWAYS_EAGER:
+            return False
         current_code_execution_task_state = self.get_current_code_execution_task_state()
-        # celert_task_states.PENDING is an "unknown" state. Celery returns PENDING state for tasks
+        # celery_task_states.PENDING is an "unknown" state. Celery returns PENDING state for tasks
         # that don't even exist. So we need to handle them appropriately.
         if (
-            current_code_execution_task_state not in celert_task_states.READY_STATES
-            and current_code_execution_task_state != celert_task_states.PENDING
+            current_code_execution_task_state not in celery_task_states.READY_STATES
+            and current_code_execution_task_state != celery_task_states.PENDING
             or
             # A precausion against failed task registerations. If a request stays "PENDING" for 10 minutes,
             # we'll assume it's lost.
             # TODO: Remove this condition if we do not experience any such loses.
-            current_code_execution_task_state == celert_task_states.PENDING
+            current_code_execution_task_state == celery_task_states.PENDING
             and self.last_code_execution_attempt_date_time is not None
             and self.last_code_execution_attempt_date_time > (timezone.now() - timedelta(minutes=10))
         ):
@@ -418,9 +421,9 @@ class SubmissionMixin(object):
         Returns:
             str: A celery task state.
         """
-        current_code_execution_task_state = celert_task_states.SUCCESS
+        current_code_execution_task_state = celery_task_states.SUCCESS
 
-        if bool(self.code_execution_task_id):
+        if bool(self.code_execution_task_id) and not settings.CELERY_ALWAYS_EAGER:
             current_code_execution_task_state = AsyncResult(self.code_execution_task_id).state
 
         return current_code_execution_task_state
@@ -429,9 +432,9 @@ class SubmissionMixin(object):
         """
         Revokes `self.code_execution_task_id` if it exists.
         """
-        if bool(self.code_execution_task_id):
+        if bool(self.code_execution_task_id) and not settings.CELERY_ALWAYS_EAGER:
             task_result = AsyncResult(self.code_execution_task_id)
-            if task_result.state not in celert_task_states.READY_STATES:
+            if task_result.state not in celery_task_states.READY_STATES:
                 task_result.revoke()
         self.code_execution_task_id = None
         self.save()
@@ -488,6 +491,7 @@ class SubmissionMixin(object):
         student_user_id = self.get_user_id_from_student_dict(student_item_dict)
 
         self.save()
+
         def run_code():
             self.code_execution_task_id = run_and_save_test_cases_output.apply_async(
                 kwargs={
@@ -552,7 +556,7 @@ class SubmissionMixin(object):
 
         if self.is_code_execution_in_progress():
             execution_state = 'running'
-        elif self.get_current_code_execution_task_state() != celert_task_states.SUCCESS:
+        elif self.get_current_code_execution_task_state() != celery_task_states.SUCCESS:
             execution_state = 'failure'
         else:
             execution_state = 'success'

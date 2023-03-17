@@ -480,7 +480,7 @@ class SubmissionMixin(object):
         # at once.
         self.revoke_existing_task()
 
-        show_staff_cases = self.show_private_test_case_results and not is_design_problem(self.display_name)
+        show_staff_cases = self.show_private_test_case_results and not is_design_problem(self.scope_ids.usage_id, self.display_name)
 
         self.saved_response = json.dumps(data)
         self.has_saved = True
@@ -552,7 +552,7 @@ class SubmissionMixin(object):
         """
         execution_state = 'none'
         execution_results = {}
-        show_staff_cases = self.show_private_test_case_results and not is_design_problem(self.display_name)
+        show_staff_cases = self.show_private_test_case_results and not is_design_problem(self.scope_ids.usage_id, self.display_name)
 
         if self.is_code_execution_in_progress():
             execution_state = 'running'
@@ -997,7 +997,7 @@ class SubmissionMixin(object):
                 workflow["submission_uuid"]
             )
             context["student_submission"] = update_submission_old_format_answer(student_submission)
-            context["design_problem"] = is_design_problem(self.display_name)
+            context["design_problem"] = is_design_problem(self.scope_ids.usage_id, self.display_name)
             context['code_language'] = get_code_language(context["student_submission"]['answer']['executor_id'])
             path = 'openassessmentblock/response/oa_response_graded.html'
         else:
@@ -1009,7 +1009,7 @@ class SubmissionMixin(object):
             context["peer_incomplete"] = peer_in_workflow and not workflow["status_details"]["peer"]["complete"]
             context["self_incomplete"] = self_in_workflow and not workflow["status_details"]["self"]["complete"]
 
-            context["design_problem"] = is_design_problem(self.display_name)
+            context["design_problem"] = is_design_problem(self.scope_ids.usage_id, self.display_name)
             context["student_submission"] = update_submission_old_format_answer(student_submission)
             context['code_language'] = get_code_language(context["student_submission"]['answer']['executor_id'])
 

@@ -95,16 +95,17 @@ class CodeGraderMixin(object):
             return self.response_with_error_v2('No such language available.')
 
         output = []
-        if is_design_problem(problem_name):
+        usage_key = self.get_xblock_id()
+        if is_design_problem(usage_key, problem_name):
             try:
                 details = self.run_design_code(executor_id, source_code=source_code)
                 if len(json.dumps(details)) > SUBMISSION_MAX_SIZE:
                     error = 'Output size exceeded. Maximum allowed size is 100 KB.'
-                    output.extend(self.response_with_error_v2(error, is_design_problem(problem_name)))
+                    output.extend(self.response_with_error_v2(error, is_design_problem(usage_key, problem_name)))
                 else:
                     output.append(details)
             except CodeCompilationError as ex:
-                output.extend(self.response_with_error_v2(ex.message, is_design_problem(problem_name)))
+                output.extend(self.response_with_error_v2(ex.message, is_design_problem(usage_key, problem_name)))
         else:
             try:
                 details = self.run_code('sample', executor_id, source_code, problem_name)
@@ -334,7 +335,7 @@ class CodeGraderMixin(object):
                 run_output = self.compare_outputs(
                     formatted_results['output'],
                     case_file['expected_output_file']['name'],
-                    problem_name,
+                    question=None
                 )
 
                 if run_output['correct']:
@@ -419,7 +420,7 @@ class CodeGraderMixin(object):
         """
         return {'correct': False, 'score': 0, 'errors': [message], 'tests': []}
 
-    def compare_outputs(self, actual_output, expected_output_file, problem_name):
+    def compare_outputs(self, actual_output, expected_output_file, question=None):
         """
         compares actual and expected output line by line after stripping
         any whitespaces at the ends. Raises Exception if outputs do not match
@@ -429,7 +430,7 @@ class CodeGraderMixin(object):
             expected_output_file(str): file name containing expected output of test case
             problem_name(str)
         """
-        if not is_design_problem(problem_name):
+        if not is_design_problem(question):
             expected_output = open(expected_output_file, 'r').read().rstrip()
             actual_output = actual_output.rstrip()
 

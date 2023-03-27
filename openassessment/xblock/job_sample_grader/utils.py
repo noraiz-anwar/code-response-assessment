@@ -12,12 +12,12 @@ def is_design_problem(usage_id=None, problem_name=None, question=None):
     """
     if question:
         return question.sub_category == "desgin_problem"
-    
+
     question = Question.get_by_usage_key(
-    usage_key=str(usage_id),
-    fallback_title=problem_name
+        usage_key=str(usage_id),
+        fallback_title=problem_name
     )
-    problem_name_in_lower = problem_name.lower()
+    problem_name_in_lower = question.title.lower()
     return question.sub_category == "desgin_problem" or problem_name_in_lower.endswith('design problem')
 
 def get_error_response(run_type, error, is_design_problem=False):

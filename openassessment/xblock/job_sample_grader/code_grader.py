@@ -335,7 +335,7 @@ class CodeGraderMixin(object):
                 run_output = self.compare_outputs(
                     formatted_results['output'],
                     case_file['expected_output_file']['name'],
-                    question=None
+                    usage_key=usage_key
                 )
 
                 if run_output['correct']:
@@ -420,7 +420,7 @@ class CodeGraderMixin(object):
         """
         return {'correct': False, 'score': 0, 'errors': [message], 'tests': []}
 
-    def compare_outputs(self, actual_output, expected_output_file, question=None):
+    def compare_outputs(self, actual_output, expected_output_file, usage_key=None):
         """
         compares actual and expected output line by line after stripping
         any whitespaces at the ends. Raises Exception if outputs do not match
@@ -428,9 +428,9 @@ class CodeGraderMixin(object):
         Args:
             actual_output(str): output of learner code
             expected_output_file(str): file name containing expected output of test case
-            problem_name(str)
+            usage_key(str)
         """
-        if not is_design_problem(question):
+        if not is_design_problem(usage_id=usage_key):
             expected_output = open(expected_output_file, 'r').read().rstrip()
             actual_output = actual_output.rstrip()
 

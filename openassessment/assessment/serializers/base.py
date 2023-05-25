@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class InvalidRubric(Exception):
     """This can be raised during the deserialization process."""
+
     def __init__(self, errors):
         Exception.__init__(self, repr(errors))
         self.errors = deepcopy(errors)
@@ -48,17 +49,11 @@ class CriterionSerializer(serializers.ModelSerializer):
 
 class RubricSerializer(serializers.ModelSerializer):
     """Serializer for :class:`Rubric`."""
-    criteria = CriterionSerializer(required=True, many=True)
+    criteria = CriterionSerializer(required=False, many=True)
 
     class Meta:
         model = Rubric
         fields = ('id', 'content_hash', 'structure_hash', 'criteria', 'points_possible')
-
-    def validate_criteria(self, value):
-        """Make sure we have at least one Criterion in the Rubric."""
-        if not value:
-            raise serializers.ValidationError("Must have at least one criterion")
-        return value
 
     @classmethod
     def serialized_from_cache(cls, rubric, local_cache=None):

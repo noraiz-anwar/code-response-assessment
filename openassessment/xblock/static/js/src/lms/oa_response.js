@@ -259,7 +259,9 @@ OpenAssessment.ResponseView.prototype = {
         }
 
         // Update the summary element with created table
-        $("#test_case_status_result", this.element).html($table);
+        if (test_results.length > 0) {
+            $("#test_case_status_result", this.element).html($table);
+        }
     },
 
     /*

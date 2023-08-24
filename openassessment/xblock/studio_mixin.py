@@ -35,23 +35,14 @@ class StudioMixin(object):
     Studio editing view for OpenAssessment XBlock.
     """
 
-    DEFAULT_CRITERIA = [
-        {
-            'label': '',
-            'options': [
-                {
-                    'label': ''
-                },
-            ]
-        }
-    ]
+    DEFAULT_CRITERIA = []
 
     NECESSITY_OPTIONS = {
         "required": ugettext_lazy("Required"),
         "optional": ugettext_lazy("Optional"),
         "": ugettext_lazy("None")
     }
-    
+
     CODE_EXECUTOR_OPTIONS = {
         CodeExecutorOption.ServerShell.value: ugettext_lazy("Server's Shell"),
         CodeExecutorOption.Epicbox.value: ugettext_lazy("Epicbox"),
@@ -157,7 +148,7 @@ class StudioMixin(object):
             'criteria': criteria,
             'feedbackprompt': self.rubric_feedback_prompt,
             'feedback_default_text': feedback_default_text,
-            'text_response': self.text_response if self.text_response  else '',
+            'text_response': self.text_response if self.text_response else '',
             'file_upload_response': self.file_upload_response if self.file_upload_response else '',
             'necessity_options': self.NECESSITY_OPTIONS,
             'file_upload_type': self.file_upload_type,

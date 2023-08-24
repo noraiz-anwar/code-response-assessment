@@ -13,19 +13,19 @@
  * criterionUpdated: A criterion's label was updated in the rubric.
 
  **/
-OpenAssessment.EditRubricView = function(element, notifier) {
+OpenAssessment.EditRubricView = function (element, notifier) {
     this.element = element;
     this.criterionAddButton = $('#openassessment_rubric_add_criterion', this.element);
 
     this.criteriaContainer = new OpenAssessment.Container(
         OpenAssessment.RubricCriterion, {
-            containerElement: $('#openassessment_criterion_list', this.element).get(0),
-            templateElement: $('#openassessment_criterion_template', this.element).get(0),
-            addButtonElement: $('#openassessment_rubric_add_criterion', this.element).get(0),
-            removeButtonClass: 'openassessment_criterion_remove_button',
-            containerItemClass: 'openassessment_criterion',
-            notifier: notifier,
-        }
+        containerElement: $('#openassessment_criterion_list', this.element).get(0),
+        templateElement: $('#openassessment_criterion_template', this.element).get(0),
+        addButtonElement: $('#openassessment_rubric_add_criterion', this.element).get(0),
+        removeButtonClass: 'openassessment_criterion_remove_button',
+        containerItemClass: 'openassessment_criterion',
+        notifier: notifier,
+    }
     );
     this.criteriaContainer.addEventListeners();
 };
@@ -59,7 +59,7 @@ OpenAssessment.EditRubricView.prototype = {
      ]
 
      **/
-    criteriaDefinition: function() {
+    criteriaDefinition: function () {
         var criteria = this.criteriaContainer.getItemValues();
 
         // Add order_num fields for criteria and options
@@ -87,7 +87,7 @@ OpenAssessment.EditRubricView.prototype = {
      string
 
      **/
-    feedbackPrompt: function(text) {
+    feedbackPrompt: function (text) {
         var sel = $('#openassessment_rubric_feedback', this.element);
         return OpenAssessment.Fields.stringField(sel, text);
     },
@@ -104,7 +104,7 @@ OpenAssessment.EditRubricView.prototype = {
      string
 
      **/
-    feedback_default_text: function(text) {
+    feedback_default_text: function (text) {
         var sel = $('#openassessment_rubric_feedback_default_text', this.element);
         return OpenAssessment.Fields.stringField(sel, text);
     },
@@ -113,7 +113,7 @@ OpenAssessment.EditRubricView.prototype = {
      Add a new criterion to the rubric.
      Uses a client-side template to create the new criterion.
      **/
-    addCriterion: function() {
+    addCriterion: function () {
         this.criteriaContainer.add();
     },
 
@@ -123,7 +123,7 @@ OpenAssessment.EditRubricView.prototype = {
      Args:
      item (OpenAssessment.RubricCriterion): The criterion item to remove.
      **/
-    removeCriterion: function(item) {
+    removeCriterion: function (item) {
         this.criteriaContainer.remove(item);
     },
 
@@ -134,7 +134,7 @@ OpenAssessment.EditRubricView.prototype = {
      Array of OpenAssessment.RubricCriterion objects.
 
      **/
-    getAllCriteria: function() {
+    getAllCriteria: function () {
         return this.criteriaContainer.getAllItems();
     },
 
@@ -148,7 +148,7 @@ OpenAssessment.EditRubricView.prototype = {
      OpenAssessment.RubricCriterion or null
 
      **/
-    getCriterionItem: function(index) {
+    getCriterionItem: function (index) {
         return this.criteriaContainer.getItem(index);
     },
 
@@ -160,7 +160,7 @@ OpenAssessment.EditRubricView.prototype = {
      the option will be added (starts from 0).
 
      **/
-    addOption: function(criterionIndex) {
+    addOption: function (criterionIndex) {
         var criterionItem = this.getCriterionItem(criterionIndex);
         criterionItem.optionContainer.add();
     },
@@ -173,7 +173,7 @@ OpenAssessment.EditRubricView.prototype = {
      item (OpenAssessment.RubricOption): The option item to remove.
 
      **/
-    removeOption: function(criterionIndex, item) {
+    removeOption: function (criterionIndex, item) {
         var criterionItem = this.getCriterionItem(criterionIndex);
         criterionItem.optionContainer.remove(item);
     },
@@ -187,7 +187,7 @@ OpenAssessment.EditRubricView.prototype = {
      Returns:
      Array of OpenAssessment.RubricOption
      **/
-    getAllOptions: function(criterionIndex) {
+    getAllOptions: function (criterionIndex) {
         var criterionItem = this.getCriterionItem(criterionIndex);
         return criterionItem.optionContainer.getAllItems();
     },
@@ -204,7 +204,7 @@ OpenAssessment.EditRubricView.prototype = {
      OpenAssessment.RubricOption
 
      **/
-    getOptionItem: function(criterionIndex, optionIndex) {
+    getOptionItem: function (criterionIndex, optionIndex) {
         var criterionItem = this.getCriterionItem(criterionIndex);
         return criterionItem.optionContainer.getItem(optionIndex);
     },
@@ -216,19 +216,19 @@ OpenAssessment.EditRubricView.prototype = {
      Boolean indicating whether the view is valid.
 
      **/
-    validate: function() {
+    validate: function () {
         var criteria = this.getAllCriteria();
-        var isValid = criteria.length > 0;
+        var isValid = criteria.length >= 0;
         if (!isValid) {
             this.criterionAddButton
                 .addClass('openassessment_highlighted_field')
-                .click(function() {
+                .click(function () {
                     $(this).removeClass('openassessment_highlighted_field');
                 }
                 );
         }
 
-        $.each(criteria, function() {
+        $.each(criteria, function () {
             isValid = (this.validate() && isValid);
         });
 
@@ -243,7 +243,7 @@ OpenAssessment.EditRubricView.prototype = {
      list of string
 
      **/
-    validationErrors: function() {
+    validationErrors: function () {
         var errors = [];
 
         if (this.criterionAddButton.hasClass('openassessment_highlighted_field')) {
@@ -251,7 +251,7 @@ OpenAssessment.EditRubricView.prototype = {
         }
 
         // Sub-validates the criteria defined by the rubric
-        $.each(this.getAllCriteria(), function() {
+        $.each(this.getAllCriteria(), function () {
             errors = errors.concat(this.validationErrors());
         });
 
@@ -261,10 +261,10 @@ OpenAssessment.EditRubricView.prototype = {
     /**
      Clear all validation errors from the UI.
      **/
-    clearValidationErrors: function() {
+    clearValidationErrors: function () {
         this.criterionAddButton.removeClass('openassessment_highlighted_field');
 
-        $.each(this.getAllCriteria(), function() {
+        $.each(this.getAllCriteria(), function () {
             this.clearValidationErrors();
         });
     },

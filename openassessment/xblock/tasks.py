@@ -130,7 +130,7 @@ def run_and_save_staff_test_cases(block_id, sub_uuid, problem_name, **kwargs):
     If staff response present, attempt saving it
     If not saved, add a default error response and log the exception
     """
-    if is_design_problem(problem_name):
+    if is_design_problem(block_id, problem_name):
         CODING_TEST_CASES_EVALUATED.send(
             sender=None,
             block_id=block_id,

@@ -3,17 +3,24 @@ Holds utility functions related to code_grader module.
 """
 
 
+from litmustest_djangoapps.core.models import Question
 
 
-def is_design_problem(problem_name):
+def is_design_problem(usage_id=None, problem_name=None, question=None):
     """
     Temporary helper method to check if a coding problem is a design problem.
     """
-    problem_name_in_lower = problem_name.lower()
-    return problem_name_in_lower.endswith('design problem')
+    if question:
+        return question.sub_category == "design_problem"
 
+    question = Question.get_by_usage_key(
+        usage_key=str(usage_id),
+        fallback_title=problem_name
+    )
+    problem_name_in_lower = question.title.lower()
+    return question.sub_category == "design_problem" or problem_name_in_lower.endswith('design problem')
 
-def get_error_response(run_type, error):
+def get_error_response(run_type, error, is_design_problem=False):
     """
     Create a sample error response for a given run and the error to be displayed.
     """
@@ -23,7 +30,8 @@ def get_error_response(run_type, error):
         'correct': 0,
         'incorrect': 0,
         'output': None,
-        'error': [error]
+        'error': [error],
+        'is_design_problem': is_design_problem,
     }
 
 

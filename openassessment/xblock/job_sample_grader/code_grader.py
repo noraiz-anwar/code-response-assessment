@@ -401,6 +401,31 @@ class CodeGraderMixin(object):
 
         return output
 
+    def run_quality_check_code(self, code, input):
+        output = {
+            'output': None,
+            'error': None,
+        }
+        executor = list(
+            filter(
+                lambda _executor: _executor['language'] == 'python',
+                self.EPICBOX_EXECUTORS,
+            )
+        )[0]
+        executor_id = executor['value']
+        code_executor = CodeExecutorFactory.get_code_executor(
+            executor_id, source_code=code, files=[]
+        )
+
+        with code_executor:
+            execution_results = code_executor.run_input(input)
+            response = self._executor_output_to_response_format(execution_results)
+            output = {
+                **output,
+                **response,
+            }
+        return output
+
     @classmethod
     def get_test_case_count(cls, problem_name, run_type):
         """

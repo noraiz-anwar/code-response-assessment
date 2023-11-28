@@ -13,6 +13,7 @@ from openassessment.xblock.code_executor.factory import (
     CODE_EXECUTOR_CONFIGS,
     CodeExecutorFactory,
 )
+from openassessment.xblock.code_executor.constants import DEFAULT_LIMITS
 from openassessment.xblock.enums import CodeExecutorOption
 from openassessment.xblock.job_sample_grader.utils import (
     is_design_problem,
@@ -413,8 +414,11 @@ class CodeGraderMixin(object):
             )
         )[0]
         executor_id = executor['value']
+        updated_limits = dict(DEFAULT_LIMITS)
+        updated_limits['cputime'] = 120
+        updated_limits['realtime'] = 130
         code_executor = CodeExecutorFactory.get_code_executor(
-            executor_id, source_code=code, files=[]
+            executor_id, source_code=code, files=[], limits=updated_limits,
         )
 
         with code_executor:

@@ -13,6 +13,7 @@ from openassessment.xblock.code_executor.factory import (
     CODE_EXECUTOR_CONFIGS,
     CodeExecutorFactory,
 )
+from openassessment.xblock.code_executor.constants import DEFAULT_LIMITS
 from openassessment.xblock.enums import CodeExecutorOption
 from openassessment.xblock.job_sample_grader.utils import (
     is_design_problem,
@@ -399,6 +400,34 @@ class CodeGraderMixin(object):
         if self.is_code_input_from_file and self.executor == CodeExecutorOption.ServerShell.value:
             input_file.close()
 
+        return output
+
+    def run_quality_check_code(self, code, input):
+        output = {
+            'output': None,
+            'error': None,
+        }
+        executor = list(
+            filter(
+                lambda _executor: _executor['language'] == 'python',
+                self.EPICBOX_EXECUTORS,
+            )
+        )[0]
+        executor_id = executor['value']
+        updated_limits = dict(DEFAULT_LIMITS)
+        updated_limits['cputime'] = 120
+        updated_limits['realtime'] = 130
+        code_executor = CodeExecutorFactory.get_code_executor(
+            executor_id, source_code=code, files=[], limits=updated_limits,
+        )
+
+        with code_executor:
+            execution_results = code_executor.run_input(input)
+            response = self._executor_output_to_response_format(execution_results)
+            output = {
+                **output,
+                **response,
+            }
         return output
 
     @classmethod

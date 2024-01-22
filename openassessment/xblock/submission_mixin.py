@@ -218,7 +218,7 @@ class SubmissionMixin(object):
                                                                   'course_id'])
             if attempt and attempt.status == 'submitted':
                 msg = (
-                    u"Attempt already submitted "
+                    u"Exam already submitted "
                     u"a response for the user: {student_item}"
                 ).format(student_item=student_item_dict)
                 logger.exception(msg)

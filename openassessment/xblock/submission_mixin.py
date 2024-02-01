@@ -24,6 +24,8 @@ from openassessment.workflow.errors import AssessmentWorkflowError
 from openassessment.xblock.tasks import run_and_save_staff_test_cases, run_and_save_test_cases_output
 from xblock.core import XBlock
 
+from litmustest_djangoapps.core.models import ScheduledAssessment
+
 from lms.djangoapps.courseware.models import StudentModule
 from student.models import user_by_anonymous_id
 from edx_proctoring.models import ProctoredExamStudentAttempt
@@ -213,22 +215,25 @@ class SubmissionMixin(object):
         if not workflow:
             student_item_dict = self.get_student_item_dict()
             student_id = self.get_user_id_from_student_dict(student_item_dict)
-            attempt = ProctoredExamStudentAttempt.objects.get(user__id=student_id,
-                                                              proctored_exam__course_id=student_item_dict[
-                                                                  'course_id'])
-            if attempt and attempt.status == 'submitted':
-                msg = (
-                    u"Exam already submitted "
-                    u"a response for the user: {student_item}"
-                ).format(student_item=student_item_dict)
-                logger.exception(msg)
-                status_tag = 'EUNKNOWN'
-                status_text = self._(u'Please refresh to submit')
-                return (
-                    False,
-                    status_tag,
-                    status_text
-                )
+            course_id = student_item_dict['course_id']
+            scheduled_assessment = ScheduledAssessment.objects.get(course_overview=course_id)
+
+            if scheduled_assessment.is_timed:
+                attempt = ProctoredExamStudentAttempt.objects.get(user__id=student_id,
+                                                                  proctored_exam__course_id=course_id)
+                if attempt and attempt.status == 'submitted':
+                    msg = (
+                        u"Exam already submitted "
+                        u"a response for the user: {student_item}"
+                    ).format(student_item=student_item_dict)
+                    logger.exception(msg)
+                    status_tag = 'EUNKNOWN'
+                    status_text = self._(u'Please refresh to submit')
+                    return (
+                        False,
+                        status_tag,
+                        status_text
+                    )
             try:
                 submission = self.submit_code_response(data, student_item_dict)
             except api.SubmissionRequestError as err:
